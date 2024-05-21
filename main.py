@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from collections import deque
 import random
 
 app = FastAPI()
@@ -29,7 +30,7 @@ def initialize_board():
     - "Lava": Reduces health by 50 and moves by 10.
     - "Mud": Reduces health by 10 and moves by 5.
 
-    The board is initalized with a random number of between 400 and 600 of each special tile type.
+    The board is initalized with a random number of between 200 and 400 of each non-blank tile type.
 
     Returns:
         list: The initialized game board.
@@ -37,9 +38,10 @@ def initialize_board():
     board = [["Blank" for _ in range(50)] for _ in range(50)]
     tile_types = ["Speeder", "Lava", "Mud"]
     tile_counts = {
-        "Speeder": random.randint(400, 600),
-        "Lava": random.randint(400, 600),
-        "Mud": random.randint(400, 600)
+        # from testing I found that the 200-400 range of each made >= 90% of puzzles solvable
+        "Speeder": random.randint(200, 400),
+        "Lava": random.randint(200, 400),
+        "Mud": random.randint(200, 400)
     }
 
     for tile_type, count in tile_counts.items():
@@ -206,3 +208,70 @@ def make_move(game_id: str, move: Move):
         "end_position": game.end_position,
         "message": f"Move successful. You landed in {tile_type} and lost {health_lost} health and {moves_lost} moves."
     }
+
+@app.get("/games/{game_id}/winning_path")
+def check_winning_path(game_id: str):
+    """
+    Check if a winning path exists for the current game board using breadth-first search (BFS).
+
+    Args:
+        game_id (str): The ID of the game.
+
+    Returns:
+        dict: A dictionary indicating whether a winning path exists.
+    """
+    if game_id not in games:
+        return {"error": "Game not found"}
+    game = games[game_id]
+
+    def find_winning_path(board, start, end, health, moves):
+        rows = len(board)
+        cols = len(board[0])
+        visited_tiles = set()  # track visited positions
+        queue = deque([(start, health, moves)])  # BFS queue
+
+        # Breadth-first search to find a winning path:
+        # explores all possible paths starting from the player's position and iteratively
+        # moves to adjacent tiles based on the remaining health and moves available until
+        # it reaches the end, runs out of health/moves, or explores all possible paths
+        while queue:
+            (row, col), health, moves = queue.popleft()  # get next position from the queue
+            if (row, col) == end:
+                return True # winning path found
+            if health <= 0 or moves <= 0:
+                continue    # skip this position if health or moves run out
+            if (row, col) in visited_tiles:
+                continue    # skip this position if already visited
+
+            visited_tiles.add((row, col)) # mark position as visited
+
+            # explore adjacent tiles (right, left, down, up)
+            for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                new_row, new_col = row + dr, col + dc
+                if 0 <= new_row < rows and 0 <= new_col < cols: # check if new position is within the board
+                    tile_type = board[new_row][new_col]
+                    if tile_type == "Speeder":
+                        new_health = health - 5
+                        new_moves = moves
+                    elif tile_type == "Lava":
+                        new_health = health - 50
+                        new_moves = moves - 10
+                    elif tile_type == "Mud":
+                        new_health = health - 10
+                        new_moves = moves - 5
+                    else:
+                        new_health = health
+                        new_moves = moves - 1
+
+                    queue.append(((new_row, new_col), new_health, new_moves))   # add new position to the queue
+
+        return False    # no winning path was found
+
+    start = game.player_position
+    end = game.end_position
+    health = game.health
+    moves = game.moves
+
+    winning_path_exists = find_winning_path(game.board, start, end, health, moves)
+
+    return {"winning_path_exists": winning_path_exists}
