@@ -40,6 +40,8 @@ To make a move, send a POST request to http://localhost:8000/games/{id}/move wit
 
 where the direction is one of the four possible move directions (up, down, left, right).
 
+This endpoint will return the following information after a successful move: the type of tile the player landed on, their new position, remaining moves, remaining health, health lost, moves lost, and the winning end position.
+
 ## Documentation
 
-FastAPI automatically creates documentation which is accessible at http://localhost:8000/docs provided the server is running.
+FastAPI automatically creates documentation which is accessible at http://localhost:8000/docs provided the server is running. The FastAPI documentation site can also be used to test the API endpoints.

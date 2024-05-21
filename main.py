@@ -29,13 +29,26 @@ def initialize_board():
     - "Lava": Reduces health by 50 and moves by 10.
     - "Mud": Reduces health by 10 and moves by 5.
 
+    The board is initalized with a random number of between 400 and 600 of each special tile type.
+
     Returns:
         list: The initialized game board.
     """
     board = [["Blank" for _ in range(50)] for _ in range(50)]
-    for _ in range(500):
-        row, col = random.randint(0, 49), random.randint(0, 49)
-        board[row][col] = random.choice(["Speeder", "Lava", "Mud"])
+    tile_types = ["Speeder", "Lava", "Mud"]
+    tile_counts = {
+        "Speeder": random.randint(400, 600),
+        "Lava": random.randint(400, 600),
+        "Mud": random.randint(400, 600)
+    }
+
+    for tile_type, count in tile_counts.items():
+        while count > 0:
+            row, col = random.randint(0, 49), random.randint(0, 49)
+            if board[row][col] == "Blank":
+                board[row][col] = tile_type
+                count -= 1
+
     return board
 
 def update_game_state(game, row, col):
@@ -142,7 +155,7 @@ def make_move(game_id: str, move: Move):
     Returns:
         dict: A dictionary containing the result of the move, including the type of tile
         the player landed on, their new position, remaining moves, remaining health,
-        and a message indicating the outcome.
+        health lost, moves lost, end position, and a message indicating the outcome.
     """
     if game_id not in games:
         return {"error": "Game not found"}
@@ -160,18 +173,26 @@ def make_move(game_id: str, move: Move):
         return {"error": "Invalid move"}
 
     tile_type = game.board[row][col]
+    health_before = game.health
+    moves_before = game.moves
     update_game_state(game, row, col)
+    health_lost = health_before - game.health
+    moves_lost = moves_before - game.moves
 
     if game.health <= 0 or game.moves <= 0:
         return {
             "tile_type": tile_type,
             "new_position": (row, col),
-            "message": "Game over"
+            "health_lost": health_lost,
+            "moves_lost": moves_lost,
+            "end_position": game.end_position,
+            "message": "Game over, you lost!"
         }
     if (row, col) == game.end_position:
         return {
             "tile_type": tile_type,
             "new_position": (row, col),
+            "end_position": game.end_position,
             "message": "You won!"
         }
 
@@ -180,5 +201,8 @@ def make_move(game_id: str, move: Move):
         "new_position": (row, col),
         "remaining_moves": game.moves,
         "remaining_health": game.health,
-        "message": "Move successful"
+        "health_lost": health_lost,
+        "moves_lost": moves_lost,
+        "end_position": game.end_position,
+        "message": f"Move successful. You landed in {tile_type} and lost {health_lost} health and {moves_lost} moves."
     }
