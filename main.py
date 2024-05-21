@@ -25,8 +25,8 @@ def initialize_board():
     Create a new game board with random cell types.
 
     The board is a 50x50 grid, where each cell can be one of the following types:
-    - "Blank": No effect on health or moves.
-    - "Speeder": Reduces health by 5.
+    - "Blank": No effect on health, reduces moves by one.
+    - "Speeder": Reduces health by 5, no effect on moves.
     - "Lava": Reduces health by 50 and moves by 10.
     - "Mud": Reduces health by 10 and moves by 5.
 
@@ -38,7 +38,7 @@ def initialize_board():
     board = [["Blank" for _ in range(50)] for _ in range(50)]
     tile_types = ["Speeder", "Lava", "Mud"]
     tile_counts = {
-        # from testing I found that the 200-400 range of each made >= 90% of puzzles solvable
+        # 200-400 range of each made >= 90% of puzzles solvable
         "Speeder": random.randint(200, 400),
         "Lava": random.randint(200, 400),
         "Mud": random.randint(200, 400)
